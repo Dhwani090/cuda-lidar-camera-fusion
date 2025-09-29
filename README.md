@@ -11,16 +11,6 @@ A high-performance CUDA implementation for LiDAR + Camera fusion in autonomous v
 - **Real-time Visualization**: Live BEV map updates with performance monitoring
 - **Performance Benchmarking**: Comprehensive comparison against CPU OpenCV baseline
 
-## Performance Results
-
-| Operation | CPU (OpenCV) | CUDA | Speedup |
-|-----------|--------------|------|---------|
-| LiDAR Voxelization | ~200ms | **~15ms** | **13.3x** |
-| Camera Projection | ~150ms | **~8ms** | **18.8x** |
-| Feature Fusion | ~50ms | **~3ms** | **16.7x** |
-| **Complete Pipeline** | **~400ms** | **~26ms** | **15.4x** |
-
-**Real-time Performance**: <33ms per frame (30+ FPS) achieved!
 
 ## Project Structure
 
@@ -71,11 +61,9 @@ CUDA_CV/
 
 ### Installation
 ```bash
-# Clone repository
 git clone <repository-url>
 cd CUDA_CV
 
-# Build and install
 ./build.sh
 ```
 
@@ -84,16 +72,8 @@ cd CUDA_CV
 import torch
 from python.bev_api import BEVTransformer, FusionMethod
 
-# Initialize transformer
 transformer = BEVTransformer(device='cuda')
 
-# Load your data
-lidar_points = torch.randn(100000, 4).cuda()  # N×4 (x,y,z,intensity)
-camera_image = torch.randint(0, 255, (480, 640, 3)).cuda()  # H×W×3 RGB
-camera_intrinsics = torch.tensor([[721.5, 0, 320.0], [0, 721.5, 240.0], [0, 0, 1.0]]).cuda()
-camera_extrinsics = torch.eye(4).cuda()
-
-# Run BEV transformation
 bev_features = transformer.transform(
     lidar_points, camera_image, camera_intrinsics, camera_extrinsics,
     fusion_method=FusionMethod.ATTENTION_FUSION
@@ -102,37 +82,15 @@ bev_features = transformer.transform(
 print(f"BEV features shape: {bev_features.shape}")
 ```
 
-### Interactive Demo
-```bash
-# Run complete demo
-python demo.py --mode all
-
-# Run specific modes
-python demo.py --mode synthetic --frames 100
-python demo.py --mode benchmark
-```
-
 ## Dataset Support
 
 ### KITTI Dataset
 ```python
 from examples.kitti_example import KITTIDataset
-
-# Load KITTI sequence
 dataset = KITTIDataset('/path/to/kitti', sequence='00')
 
-# Process frames
 for i in range(len(dataset)):
     frame_data = dataset[i]
-    # Run BEV transformation...
-```
-
-### Synthetic Data
-```python
-from examples.kitti_example import create_synthetic_kitti_data
-
-# Generate synthetic KITTI-like data
-create_synthetic_kitti_data(num_frames=100, output_dir='synthetic_kitti')
 ```
 
 ## Benchmarking
@@ -149,28 +107,6 @@ from benchmarks.benchmark import BEVBenchmark
 benchmark = BEVBenchmark(device='cuda', num_iterations=100)
 results = benchmark.run_comprehensive_benchmark()
 benchmark.generate_report(results, 'my_results')
-```
-
-
-## Advanced Features
-
-### Multi-Camera Fusion
-```python
-
-bev_features = transformer.transform(
-    lidar_points, camera_image, camera_intrinsics, camera_extrinsics,
-    fusion_method=FusionMethod.ATTENTION_FUSION
-)
-```
-
-### Custom Fusion Methods
-```python
-# Use different fusion methods
-bev_features = transformer.fuse_features(
-    lidar_occupancy, lidar_intensity, camera_color, camera_depth,
-    fusion_method=FusionMethod.CROSS_MODAL_FUSION,
-    lidar_weight=0.7, camera_weight=0.3
-)
 ```
 
 ## Use Cases
@@ -200,17 +136,6 @@ bev_features = transformer.fuse_features(
 - Memory coalescing
 - Shared memory usage
 
-### Real-time Capabilities
-- <20ms per frame processing
-- 30+ FPS processing
-- Low-latency pipeline
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Submit a pull request
 
 ## License
 
@@ -223,4 +148,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Ready to accelerate your BEV transformation? Start with `./build.sh` and `python demo.py`!**
