@@ -1,6 +1,6 @@
 # GPU-Accelerated Bird's-Eye-View (BEV) Transformation
 
-A high-performance CUDA implementation for LiDAR + Camera fusion in autonomous vehicles, featuring real-time BEV transformation with **10-20x speedup** over CPU implementations.
+A high-performance CUDA implementation for LiDAR + Camera fusion in autonomous vehicles, featuring real-time BEV transformation with speedup over CPU implementations.
 
 ## Key Features
 
