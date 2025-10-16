@@ -16,9 +16,9 @@ class KITTIDataset:
         self.calib_path = self.data_root / 'calib' / f'{sequence}.txt'
         
         if not self.sequence_path.exists():
-            raise FileNotFoundError(f"Sequence path not found: {self.sequence_path}")
+            raise FileNotFoundError(f"ERROR: Sequence path not found: {self.sequence_path}")
         if not self.calib_path.exists():
-            raise FileNotFoundError(f"Calibration file not found: {self.calib_path}")
+            raise FileNotFoundError(f"ERROR: Calibration file not found: {self.calib_path}")
         
         self.calib_data = self._load_calibration()
         
@@ -26,7 +26,7 @@ class KITTIDataset:
         self.image_files = sorted(list((self.sequence_path / 'image_2').glob('*.png')))
         
         if len(self.lidar_files) != len(self.image_files):
-            print(f"Warning: Mismatch in number of LiDAR ({len(self.lidar_files)}) and image ({len(self.image_files)}) files")
+            print(f"WARNING: LIDAR ({len(self.lidar_files)}) and image ({len(self.image_files)}) files are different sizes")
         
         self.num_frames = min(len(self.lidar_files), len(self.image_files))
         print(f"Loaded KITTI sequence {sequence} with {self.num_frames} frames")
@@ -50,7 +50,7 @@ class KITTIDataset:
     
     def load_lidar_frame(self, frame_idx: int) -> np.ndarray:
         if frame_idx >= len(self.lidar_files):
-            raise IndexError(f"Frame index {frame_idx} out of range")
+            raise IndexError(f"ERROR: Frame index {frame_idx} out of range")
         
         lidar_file = self.lidar_files[frame_idx]
         
@@ -64,7 +64,7 @@ class KITTIDataset:
     
     def load_camera_frame(self, frame_idx: int) -> np.ndarray:
         if frame_idx >= len(self.image_files):
-            raise IndexError(f"Frame index {frame_idx} out of range")
+            raise IndexError(f"ERROR: Frame index {frame_idx} out of range")
         
         image_file = self.image_files[frame_idx]
         image = cv2.imread(str(image_file))
@@ -74,7 +74,7 @@ class KITTIDataset:
     
     def get_camera_intrinsics(self) -> np.ndarray:
         if 'P2' not in self.calib_data:
-            raise ValueError("Camera intrinsics not found in calibration data")
+            raise ValueError("ERROR: Camera intrinsics not found")
         
         P2 = self.calib_data['P2']
         intrinsics = P2[:3, :3]
@@ -83,7 +83,7 @@ class KITTIDataset:
     
     def get_camera_extrinsics(self) -> np.ndarray:
         if 'Tr_velo_to_cam' not in self.calib_data:
-            raise ValueError("Camera extrinsics not found in calibration data")
+            raise ValueError("ERROR: Camera extrinsics not found")
         
         Tr_velo_to_cam = self.calib_data['Tr_velo_to_cam']
         extrinsics = np.eye(4)
@@ -121,7 +121,7 @@ class BEVExample:
             self.bev_transformer = BEVTransformer(device=device)
             self.api_available = True
         except ImportError:
-            print("Warning: BEV API not available. Using fallback implementation.")
+            print("Warning: BEV API not available")
             self.api_available = False
     
     def run_kitti_example(self, data_root: str, sequence: str = '00', num_frames: int = 10):
@@ -152,7 +152,7 @@ class BEVExample:
             print(f"Frame {i+1} processed. BEV features shape: {bev_features.shape}")
     
     def run_benchmark_example(self):
-        print("Running performance benchmark...")
+        print("Running performance benchmark:")
         
         try:
             from benchmarks.benchmark import run_benchmark
@@ -209,10 +209,10 @@ def main():
     
     example = BEVExample(device='cuda')
     
-    print("\n1. Running performance benchmark...")
+    print("\n Running performance benchmark:")
     example.run_benchmark_example()
     
-    print("\nExample completed!")
+    print("\nCOMPLETED")
 
 if __name__ == "__main__":
     main()
