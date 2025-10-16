@@ -1,7 +1,3 @@
-"""
-KITTI dataset loader and example usage
-"""
-
 import os
 import sys
 import numpy as np
@@ -10,38 +6,22 @@ import cv2
 from typing import Tuple, Optional, Dict, List
 import struct
 from pathlib import Path
-import json
 
 class KITTIDataset:
-    """
-    KITTI dataset loader for BEV transformation
-    """
-    
     def __init__(self, data_root: str, sequence: str = '00'):
-        """
-        Initialize KITTI dataset loader
-        
-        Args:
-            data_root: Root directory of KITTI dataset
-            sequence: Sequence number (e.g., '00', '01', etc.)
-        """
         self.data_root = Path(data_root)
         self.sequence = sequence
         
-        # Set up paths
         self.sequence_path = self.data_root / 'sequences' / sequence
         self.calib_path = self.data_root / 'calib' / f'{sequence}.txt'
         
-        # Check if paths exist
         if not self.sequence_path.exists():
             raise FileNotFoundError(f"Sequence path not found: {self.sequence_path}")
         if not self.calib_path.exists():
             raise FileNotFoundError(f"Calibration file not found: {self.calib_path}")
         
-        # Load calibration data
         self.calib_data = self._load_calibration()
         
-        # Get file lists
         self.lidar_files = sorted(list((self.sequence_path / 'velodyne').glob('*.bin')))
         self.image_files = sorted(list((self.sequence_path / 'image_2').glob('*.png')))
         
@@ -52,7 +32,6 @@ class KITTIDataset:
         print(f"Loaded KITTI sequence {sequence} with {self.num_frames} frames")
     
     def _load_calibration(self) -> Dict:
-        """Load KITTI calibration data"""
         calib_data = {}
         
         with open(self.calib_path, 'r') as f:
@@ -70,15 +49,6 @@ class KITTIDataset:
         return calib_data
     
     def load_lidar_frame(self, frame_idx: int) -> np.ndarray:
-        """
-        Load LiDAR frame
-        
-        Args:
-            frame_idx: Frame index
-            
-        Returns:
-            Point cloud as Nx4 array (x, y, z, intensity)
-        """
         if frame_idx >= len(self.lidar_files):
             raise IndexError(f"Frame index {frame_idx} out of range")
         
@@ -93,15 +63,6 @@ class KITTIDataset:
         return points.astype(np.float32)
     
     def load_camera_frame(self, frame_idx: int) -> np.ndarray:
-        """
-        Load camera frame
-        
-        Args:
-            frame_idx: Frame index
-            
-        Returns:
-            Camera image as HxWx3 array
-        """
         if frame_idx >= len(self.image_files):
             raise IndexError(f"Frame index {frame_idx} out of range")
         
@@ -112,7 +73,6 @@ class KITTIDataset:
         return image.astype(np.uint8)
     
     def get_camera_intrinsics(self) -> np.ndarray:
-        """Get camera intrinsic matrix"""
         if 'P2' not in self.calib_data:
             raise ValueError("Camera intrinsics not found in calibration data")
         
@@ -122,7 +82,6 @@ class KITTIDataset:
         return intrinsics.astype(np.float32)
     
     def get_camera_extrinsics(self) -> np.ndarray:
-        """Get camera extrinsic matrix (LiDAR to camera transformation)"""
         if 'Tr_velo_to_cam' not in self.calib_data:
             raise ValueError("Camera extrinsics not found in calibration data")
         
@@ -133,15 +92,6 @@ class KITTIDataset:
         return extrinsics.astype(np.float32)
     
     def get_frame(self, frame_idx: int) -> Dict:
-        """
-        Get complete frame data
-        
-        Args:
-            frame_idx: Frame index
-            
-        Returns:
-            Dictionary containing LiDAR points, camera image, and calibration data
-        """
         lidar_points = self.load_lidar_frame(frame_idx)
         camera_image = self.load_camera_frame(frame_idx)
         intrinsics = self.get_camera_intrinsics()
@@ -161,19 +111,8 @@ class KITTIDataset:
     def __getitem__(self, idx):
         return self.get_frame(idx)
 
-
 class BEVExample:
-    """
-    Complete example demonstrating BEV transformation pipeline
-    """
-    
     def __init__(self, device: str = 'cuda'):
-        """
-        Initialize BEV example
-        
-        Args:
-            device: Device to use ('cuda' or 'cpu')
-        """
         self.device = device
         
         try:
@@ -184,23 +123,8 @@ class BEVExample:
         except ImportError:
             print("Warning: BEV API not available. Using fallback implementation.")
             self.api_available = False
-        
-        try:
-            self.visualizer = None
-            self.viz_available = False
-        except ImportError:
-            print("Warning: Visualization not available.")
-            self.viz_available = False
     
     def run_kitti_example(self, data_root: str, sequence: str = '00', num_frames: int = 10):
-        """
-        Run BEV transformation on KITTI dataset
-        
-        Args:
-            data_root: Root directory of KITTI dataset
-            sequence: Sequence number
-            num_frames: Number of frames to process
-        """
         print(f"Running BEV transformation on KITTI sequence {sequence}")
         
         dataset = KITTIDataset(data_root, sequence)
@@ -215,7 +139,6 @@ class BEVExample:
             camera_intrinsics = torch.from_numpy(frame_data['camera_intrinsics']).to(self.device)
             camera_extrinsics = torch.from_numpy(frame_data['camera_extrinsics']).to(self.device)
             
-            # Run BEV transformation
             if self.api_available:
                 bev_features = self.bev_transformer.transform(
                     lidar_points, camera_image, camera_intrinsics, camera_extrinsics,
@@ -226,15 +149,9 @@ class BEVExample:
                     lidar_points, camera_image, camera_intrinsics, camera_extrinsics
                 )
             
-            # Update visualization
-            if self.viz_available:
-                pass  # Visualization removed
-            
             print(f"Frame {i+1} processed. BEV features shape: {bev_features.shape}")
     
-    
     def run_benchmark_example(self):
-        """Run performance benchmark"""
         print("Running performance benchmark...")
         
         try:
@@ -244,23 +161,15 @@ class BEVExample:
         except ImportError:
             print("Warning: Benchmark module not available.")
     
-    def run_visualization_example(self):
-        """Run real-time visualization"""
-        print("Visualization functionality has been removed.")
-        return
-    
     def _fallback_transform(self, lidar_points: torch.Tensor, camera_image: torch.Tensor,
                           camera_intrinsics: torch.Tensor, camera_extrinsics: torch.Tensor) -> torch.Tensor:
-        """Fallback transformation implementation"""
-        # Simple fallback implementation
         BEV_WIDTH = BEV_HEIGHT = 200
         BEV_DEPTH = 32
         
-        # LiDAR voxelization (simplified)
         points_np = lidar_points.cpu().numpy()
         occupancy_grid = np.zeros((BEV_WIDTH, BEV_HEIGHT, BEV_DEPTH), dtype=np.float32)
         
-        for point in points_np[:10000]:  # Limit to first 10k points for speed
+        for point in points_np[:10000]:
             x, y, z, intensity = point
             voxel_x = int((x + 25) / 0.1)
             voxel_y = int((y + 25) / 0.1)
@@ -269,28 +178,24 @@ class BEVExample:
             if 0 <= voxel_x < BEV_WIDTH and 0 <= voxel_y < BEV_HEIGHT and 0 <= voxel_z < BEV_DEPTH:
                 occupancy_grid[voxel_x, voxel_y, voxel_z] += 1.0
         
-        # Camera projection (simplified)
         image_np = camera_image.cpu().numpy()
         color_grid = np.zeros((BEV_WIDTH, BEV_HEIGHT, 3), dtype=np.float32)
         
-        for x in range(0, BEV_WIDTH, 10):  # Sample every 10th pixel
+        for x in range(0, BEV_WIDTH, 10):
             for y in range(0, BEV_HEIGHT, 10):
                 world_x = (x - BEV_WIDTH/2) * 0.1
                 world_y = (y - BEV_HEIGHT/2) * 0.1
                 world_z = 0.0
                 
-                # Simple projection
                 img_u = int(320 + world_x * 10)
                 img_v = int(240 + world_y * 10)
                 
                 if 0 <= img_u < image_np.shape[1] and 0 <= img_v < image_np.shape[0]:
                     color_grid[x, y] = image_np[img_v, img_u] / 255.0
         
-        # Feature fusion (simple concatenation)
         occupancy_tensor = torch.from_numpy(occupancy_grid).to(self.device)
         color_tensor = torch.from_numpy(color_grid).to(self.device)
         
-        # Flatten and concatenate
         occupancy_flat = occupancy_tensor.view(BEV_WIDTH, BEV_HEIGHT, -1)
         color_flat = color_tensor.view(BEV_WIDTH, BEV_HEIGHT, -1)
         
@@ -299,14 +204,11 @@ class BEVExample:
         return fused_features
 
 def main():
-    """Main example function"""
     print("GPU-Accelerated BEV Transformation Example")
     print("=========================================")
     
-    # Initialize example
     example = BEVExample(device='cuda')
     
-    # Run different examples
     print("\n1. Running performance benchmark...")
     example.run_benchmark_example()
     
