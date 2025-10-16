@@ -115,14 +115,9 @@ class BEVExample:
     def __init__(self, device: str = 'cuda'):
         self.device = device
         
-        try:
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-            from python.bev_api import BEVTransformer, FusionMethod
-            self.bev_transformer = BEVTransformer(device=device)
-            self.api_available = True
-        except ImportError:
-            print("Warning: BEV API not available")
-            self.api_available = False
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+        from python.bev_api import BEVTransformer, FusionMethod
+        self.bev_transformer = BEVTransformer(device=device)
     
     def run_kitti_example(self, data_root: str, sequence: str = '00', num_frames: int = 10):
         print(f"Running BEV transformation on KITTI sequence {sequence}")
@@ -139,15 +134,10 @@ class BEVExample:
             camera_intrinsics = torch.from_numpy(frame_data['camera_intrinsics']).to(self.device)
             camera_extrinsics = torch.from_numpy(frame_data['camera_extrinsics']).to(self.device)
             
-            if self.api_available:
-                bev_features = self.bev_transformer.transform(
-                    lidar_points, camera_image, camera_intrinsics, camera_extrinsics,
-                    2, 0.6, 0.4
-                )
-            else:
-                bev_features = self._fallback_transform(
-                    lidar_points, camera_image, camera_intrinsics, camera_extrinsics
-                )
+            bev_features = self.bev_transformer.transform(
+                lidar_points, camera_image, camera_intrinsics, camera_extrinsics,
+                2, 0.6, 0.4
+            )
             
             print(f"Frame {i+1} processed. BEV features shape: {bev_features.shape}")
     
@@ -160,48 +150,6 @@ class BEVExample:
             print("Benchmark completed. Results saved to 'benchmark_results' directory.")
         except ImportError:
             print("Warning: Benchmark module not available.")
-    
-    def _fallback_transform(self, lidar_points: torch.Tensor, camera_image: torch.Tensor,
-                          camera_intrinsics: torch.Tensor, camera_extrinsics: torch.Tensor) -> torch.Tensor:
-        BEV_WIDTH = BEV_HEIGHT = 200
-        BEV_DEPTH = 32
-        
-        points_np = lidar_points.cpu().numpy()
-        occupancy_grid = np.zeros((BEV_WIDTH, BEV_HEIGHT, BEV_DEPTH), dtype=np.float32)
-        
-        for point in points_np[:10000]:
-            x, y, z, intensity = point
-            voxel_x = int((x + 25) / 0.1)
-            voxel_y = int((y + 25) / 0.1)
-            voxel_z = int((z + 2.5) / 0.1)
-            
-            if 0 <= voxel_x < BEV_WIDTH and 0 <= voxel_y < BEV_HEIGHT and 0 <= voxel_z < BEV_DEPTH:
-                occupancy_grid[voxel_x, voxel_y, voxel_z] += 1.0
-        
-        image_np = camera_image.cpu().numpy()
-        color_grid = np.zeros((BEV_WIDTH, BEV_HEIGHT, 3), dtype=np.float32)
-        
-        for x in range(0, BEV_WIDTH, 10):
-            for y in range(0, BEV_HEIGHT, 10):
-                world_x = (x - BEV_WIDTH/2) * 0.1
-                world_y = (y - BEV_HEIGHT/2) * 0.1
-                world_z = 0.0
-                
-                img_u = int(320 + world_x * 10)
-                img_v = int(240 + world_y * 10)
-                
-                if 0 <= img_u < image_np.shape[1] and 0 <= img_v < image_np.shape[0]:
-                    color_grid[x, y] = image_np[img_v, img_u] / 255.0
-        
-        occupancy_tensor = torch.from_numpy(occupancy_grid).to(self.device)
-        color_tensor = torch.from_numpy(color_grid).to(self.device)
-        
-        occupancy_flat = occupancy_tensor.view(BEV_WIDTH, BEV_HEIGHT, -1)
-        color_flat = color_tensor.view(BEV_WIDTH, BEV_HEIGHT, -1)
-        
-        fused_features = torch.cat([occupancy_flat, color_flat], dim=-1)
-        
-        return fused_features
 
 def main():
     print("GPU-Accelerated BEV Transformation Example")
